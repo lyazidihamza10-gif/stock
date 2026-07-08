@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GestionStock Pro</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config={theme:{extend:{colors:{sb:'#0d1117',mn:'#131920',cd:'#1a2232',cdH:'#212d40',bd:'#2a3444',ac:'#f0b429',acD:'#c99a1f',sc:'#22c55e',dg:'#ef4444',wn:'#f59e0b',tp:'#f1f5f9',ts:'#8b949e'},fontFamily:{h:['Space Grotesk','sans-serif']}}}}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Space Grotesk',sans-serif;background:#131920;color:#f1f5f9;overflow:hidden;height:100vh}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:#131920}
+::-webkit-scrollbar-thumb{background:#2a3444;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#3a4a5e}
+.sidebar{width:250px;height:100vh;background:#0d1117;border-right:1px solid #1e2a3a;position:fixed;left:0;top:0;z-index:50;display:flex;flex-direction:column;transition:transform .3s ease}
+.sidebar-logo{padding:24px 20px;border-bottom:1px solid #1e2a3a}
+.sidebar-logo h2{font-size:1.25rem;font-weight:700;color:#f0b429;letter-spacing:-.5px}
+.sidebar-logo span{font-size:.75rem;color:#8b949e;display:block;margin-top:2px}
+.sidebar-nav{flex:1;padding:12px 0;overflow-y:auto}
+.sidebar-nav li{list-style:none;padding:11px 20px;margin:2px 10px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:12px;font-size:.9rem;color:#8b949e;transition:all .2s ease;position:relative}
+.sidebar-nav li:hover{color:#f1f5f9;background:#161d27}
+.sidebar-nav li.active{color:#f0b429;background:rgba(240,180,41,.08)}
+.sidebar-nav li.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;background:#f0b429;border-radius:0 3px 3px 0}
+.sidebar-nav li i{width:20px;text-align:center;font-size:.95rem}
+.sidebar-footer{padding:16px 20px;border-top:1px solid #1e2a3a;font-size:.75rem;color:#4a5568}
+.main{margin-left:250px;height:100vh;overflow-y:auto}
+.main-header{padding:20px 32px;border-bottom:1px solid #1e2a3a;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(19,25,32,.92);backdrop-filter:blur(12px);z-index:30}
+.main-header h1{font-size:1.4rem;font-weight:700}
+.main-content{padding:28px 32px}
+.stat-card{background:#1a2232;border:1px solid #2a3444;border-radius:12px;padding:22px;transition:all .25s ease;position:relative;overflow:hidden}
+.stat-card:hover{border-color:#3a4a5e;transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.stat-card .icon-wrap{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:14px}
+.stat-card .label{font-size:.8rem;color:#8b949e;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.stat-card .value{font-size:1.75rem;font-weight:700;line-height:1}
+.stat-card .trend{font-size:.75rem;margin-top:8px;display:flex;align-items:center;gap:4px}
+.data-table{width:100%;border-collapse:separate;border-spacing:0}
+.data-table thead th{padding:12px 16px;text-align:left;font-size:.75rem;text-transform:uppercase;letter-spacing:.5px;color:#8b949e;border-bottom:1px solid #2a3444;font-weight:600;position:sticky;top:0;background:#1a2232}
+.data-table tbody tr{transition:background .15s ease}
+.data-table tbody tr:hover{background:#212d40}
+.data-table tbody tr.selected-row{background:rgba(240,180,41,.06)}
+.data-table tbody td{padding:12px 16px;border-bottom:1px solid #1e2a3a;font-size:.875rem}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600}
+.badge-green{background:rgba(34,197,94,.12);color:#22c55e}
+.badge-yellow{background:rgba(245,158,11,.12);color:#f59e0b}
+.badge-red{background:rgba(239,68,68,.12);color:#ef4444}
+.btn{padding:9px 18px;border-radius:8px;font-size:.85rem;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .2s ease;font-family:inherit}
+.btn-primary{background:#f0b429;color:#0d1117}
+.btn-primary:hover{background:#f5c342;transform:translateY(-1px);box-shadow:0 4px 12px rgba(240,180,41,.3)}
+.btn-secondary{background:#212d40;color:#f1f5f9;border:1px solid #2a3444}
+.btn-secondary:hover{background:#2a3a50;border-color:#3a4a5e}
+.btn-danger{background:rgba(239,68,68,.12);color:#ef4444}
+.btn-danger:hover{background:rgba(239,68,68,.2)}
+.btn-green{background:rgba(34,197,94,.12);color:#22c55e}
+.btn-green:hover{background:rgba(34,197,94,.2)}
+.btn-sm{padding:6px 12px;font-size:.78rem}
+.btn-icon{padding:8px;width:34px;height:34px;justify-content:center}
+.form-input{width:100%;padding:10px 14px;background:#131920;border:1px solid #2a3444;border-radius:8px;color:#f1f5f9;font-size:.875rem;font-family:inherit;transition:border-color .2s ease;outline:none}
+.form-input:focus{border-color:#f0b429;box-shadow:0 0 0 3px rgba(240,180,41,.1)}
+.form-input::placeholder{color:#4a5568}
+.form-label{display:block;font-size:.8rem;color:#8b949e;margin-bottom:6px;font-weight:500}
+select.form-input{appearance:none;cursor:pointer}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);z-index:100;display:none;align-items:center;justify-content:center;animation:fadeIn .2s ease}
+.modal-overlay.show{display:flex}
+.modal-card{background:#1a2232;border:1px solid #2a3444;border-radius:16px;width:90%;max-width:580px;max-height:85vh;overflow-y:auto;animation:slideUp .25s ease}
+.modal-header{padding:20px 24px;border-bottom:1px solid #2a3444;display:flex;align-items:center;justify-content:space-between}
+.modal-header h3{font-size:1.1rem;font-weight:700}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid #2a3444;display:flex;justify-content:flex-end;gap:10px}
+.toast-container{position:fixed;top:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px}
+.toast{padding:14px 20px;border-radius:10px;font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:10px;min-width:280px;animation:slideInRight .3s ease;position:relative;overflow:hidden}
+.toast-success{background:#14332a;border:1px solid rgba(34,197,94,.2);color:#22c55e}
+.toast-error{background:#331414;border:1px solid rgba(239,68,68,.2);color:#ef4444}
+.toast-info{background:#142233;border:1px solid rgba(59,130,246,.2);color:#60a5fa}
+.toast .progress{position:absolute;bottom:0;left:0;height:2px;background:currentColor;animation:toastProgress 3s linear forwards}
+.page{display:none;animation:fadeIn .25s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideInRight{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:translateX(0)}}
+@keyframes toastProgress{from{width:100%}to{width:0%}}
+@keyframes countUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.mobile-toggle{display:none}
+@media(max-width:768px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main{margin-left:0}.mobile-toggle{display:flex}.main-content{padding:20px 16px}.main-header{padding:16px}}
+.chart-wrap{background:#1a2232;border:1px solid #2a3444;border-radius:12px;padding:20px}
+.stock-bar{height:6px;border-radius:3px;background:#2a3444;overflow:hidden}
+.stock-bar-fill{height:100%;border-radius:3px;transition:width .4s ease}
+.search-box{position:relative}
+.search-box i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#4a5568;font-size:.85rem}
+.search-box input{padding-left:40px}
+.drop-zone{border:2px dashed #2a3444;border-radius:12px;padding:40px 20px;text-align:center;transition:all .25s ease;cursor:pointer;position:relative}
+.drop-zone:hover,.drop-zone.drag-over{border-color:#f0b429;background:rgba(240,180,41,.04)}
+.drop-zone i{font-size:2.5rem;color:#2a3444;margin-bottom:12px;transition:color .25s ease}
+.drop-zone:hover i,.drop-zone.drag-over i{color:#f0b429}
+.drop-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.custom-cb{width:18px;height:18px;border:2px solid #2a3444;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s ease;flex-shrink:0;background:#131920}
+.custom-cb:hover{border-color:#f0b429}
+.custom-cb.checked{background:#f0b429;border-color:#f0b429}
+.custom-cb.checked::after{content:'\f00c';font-family:'Font Awesome 6 Free';font-weight:900;font-size:.6rem;color:#0d1117}
+.bulk-bar{position:sticky;bottom:16px;background:#1a2232;border:1px solid rgba(240,180,41,.27);border-radius:12px;padding:12px 20px;display:none;align-items:center;justify-content:space-between;z-index:20;backdrop-filter:blur(12px);box-shadow:0 8px 32px rgba(0,0,0,.4);animation:slideUp .25s ease}
+.bulk-bar.show{display:flex}
+.preview-table{max-height:260px;overflow-y:auto;border:1px solid #2a3444;border-radius:8px;margin-top:12px}
+.preview-table table{width:100%;border-collapse:collapse;font-size:.78rem}
+.preview-table th{padding:8px 10px;background:#131920;color:#8b949e;text-align:left;position:sticky;top:0;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.preview-table td{padding:7px 10px;border-top:1px solid #1e2a3a;color:#c9d1d9}
+.preview-table tr:hover td{background:#212d40}
+.empty-state{text-align:center;padding:48px 20px;color:#8b949e}
+.empty-state i{font-size:2.5rem;display:block;margin-bottom:14px;opacity:.3}
+.empty-state p{font-size:.9rem;margin-bottom:4px}
+.empty-state .hint{font-size:.78rem;opacity:.7}
+.onboard-card{background:#1a2232;border:1px solid #2a3444;border-radius:12px;padding:24px;display:flex;align-items:center;gap:16px;transition:all .25s ease;cursor:pointer}
+.onboard-card:hover{border-color:#f0b429;transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.onboard-card .onboard-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.onboard-card .onboard-title{font-weight:600;font-size:.95rem;color:#f1f5f9;margin-bottom:4px}
+.onboard-card .onboard-desc{font-size:.8rem;color:#8b949e;line-height:1.4}
+.cat-card{background:#1a2232;border:1px solid #2a3444;border-radius:12px;padding:20px;transition:all .25s ease;position:relative;overflow:hidden}
+.cat-card:hover{border-color:#3a4a5e;transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.cat-card .cat-color{width:40px;height:40px;border-radius:10px;margin-bottom:12px;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.inv-card{background:#1a2232;border:1px solid #2a3444;border-radius:12px;padding:18px;transition:all .25s ease}
+.inv-card:hover{border-color:#3a4a5e;transform:translateY(-1px)}
+</style>
+</head>
+<body>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <h2><i class="fa-solid fa-warehouse" style="margin-right:6px"></i> GestionStock</h2>
+    <span>Pro v2.0</span>
+  </div>
+  <ul class="sidebar-nav" id="sidebarNav">
+    <li data-page="dashboard" class="active"><i class="fa-solid fa-chart-pie"></i> Tableau de bord</li>
+    <li data-page="products"><i class="fa-solid fa-boxes-stacked"></i> Produits</li>
+    <li data-page="entries"><i class="fa-solid fa-arrow-down"></i> Entrees</li>
+    <li data-page="exits"><i class="fa-solid fa-arrow-up"></i> Sorties</li>
+    <li data-page="suppliers"><i class="fa-solid fa-truck-field"></i> Fournisseurs</li>
+    <li data-page="categories"><i class="fa-solid fa-tags"></i> Categories</li>
+    <li data-page="inventory"><i class="fa-solid fa-clipboard-list"></i> Inventaire</li>
+  </ul>
+  <div class="sidebar-footer">
+    <i class="fa-solid fa-circle" style="color:#22c55e;font-size:6px;vertical-align:middle;margin-right:4px"></i>
+    Systeme operationnel
+  </div>
+</aside>
+<div class="main" id="main">
+  <header class="main-header">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="btn btn-icon btn-secondary mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="fa-solid fa-bars"></i></button>
+      <h1 id="pageTitle">Tableau de bord</h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="search-box" style="width:240px">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" class="form-input" placeholder="Rechercher..." id="globalSearch" oninput="handleGlobalSearch(this.value)">
+      </div>
+    </div>
+  </header>
+  <div class="main-content">
+    <div class="page active" id="page-dashboard">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8" id="statCards"></div>
+      <div id="onboardSection"></div>
+      <div class="chart-wrap" id="recentActivityWrap">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <h3 style="font-size:.95rem;font-weight:600;color:#8b949e">ACTIVITE RECENTE</h3>
+        </div>
+        <div style="overflow-x:auto" id="recentActivity"></div>
+      </div>
+    </div>
+    <div class="page" id="page-products">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <div class="search-box" style="width:220px"><i class="fa-solid fa-magnifying-glass"></i><input type="text" class="form-input" placeholder="Chercher un produit..." id="productSearch" oninput="renderProducts()"></div>
+          <select class="form-input" style="width:170px" id="productCatFilter" onchange="renderProducts()"><option value="">Toutes categories</option></select>
+          <div class="custom-cb" id="selectAllCb" onclick="toggleSelectAll()"></div>
+          <span style="font-size:.8rem;color:#8b949e" id="selectCount">Tout selectionner</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="openProductModal()"><i class="fa-solid fa-plus"></i> Ajouter</button>
+          <button class="btn btn-green" onclick="openImportModal()"><i class="fa-solid fa-file-excel"></i> Importer Excel</button>
+          <button class="btn btn-secondary" onclick="exportToExcel()"><i class="fa-solid fa-download"></i> Exporter</button>
+          <button class="btn btn-secondary" onclick="downloadTemplate()"><i class="fa-solid fa-file-arrow-down"></i> Modele</button>
+        </div>
+      </div>
+      <div class="chart-wrap" style="padding:0;overflow-x:auto">
+        <table class="data-table" id="productsTable"><thead><tr><th style="width:40px"></th><th>Produit</th><th>Categorie</th><th>Quantite</th><th>Stock min</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="bulk-bar" id="bulkBar">
+        <span style="font-size:.9rem"><strong id="bulkCount">0</strong> produit(s) selectionne(s)</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" onclick="clearSelection()">Annuler</button>
+          <button class="btn btn-danger btn-sm" onclick="bulkDelete()"><i class="fa-solid fa-trash"></i> Supprimer la selection</button>
+        </div>
+      </div>
+    </div>
+    <div class="page" id="page-entries">
+      <h3 style="font-size:1rem;font-weight:600;color:#8b949e;margin-bottom:20px">Enregistrer une entree de stock</h3>
+      <div class="chart-wrap mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div><label class="form-label">Produit</label><select class="form-input" id="entryProduct"></select></div>
+          <div><label class="form-label">Quantite</label><input type="number" class="form-input" id="entryQty" min="1" placeholder="0"></div>
+          <div><label class="form-label">Date</label><input type="date" class="form-input" id="entryDate"></div>
+          <div><label class="form-label">Note</label><input type="text" class="form-input" id="entryNote" placeholder="Optionnel"></div>
+        </div>
+        <div style="margin-top:16px;display:flex;justify-content:flex-end">
+          <button class="btn btn-primary" onclick="addEntry()"><i class="fa-solid fa-arrow-down"></i> Valider l'entree</button>
+        </div>
+      </div>
+      <div class="chart-wrap" style="padding:0;overflow-x:auto">
+        <table class="data-table"><thead><tr><th>Date</th><th>Produit</th><th>Quantite</th><th>Note</th></tr></thead><tbody id="entriesBody"></tbody></table>
+      </div>
+    </div>
+    <div class="page" id="page-exits">
+      <h3 style="font-size:1rem;font-weight:600;color:#8b949e;margin-bottom:20px">Enregistrer une sortie de stock</h3>
+      <div class="chart-wrap mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div><label class="form-label">Produit</label><select class="form-input" id="exitProduct"></select></div>
+          <div><label class="form-label">Quantite</label><input type="number" class="form-input" id="exitQty" min="1" placeholder="0"></div>
+          <div><label class="form-label">Date</label><input type="date" class="form-input" id="exitDate"></div>
+          <div><label class="form-label">Note</label><input type="text" class="form-input" id="exitNote" placeholder="Optionnel"></div>
+        </div>
+        <div style="margin-top:16px;display:flex;justify-content:flex-end">
+          <button class="btn btn-primary" onclick="addExit()"><i class="fa-solid fa-arrow-up"></i> Valider la sortie</button>
+        </div>
+      </div>
+      <div class="chart-wrap" style="padding:0;overflow-x:auto">
+        <table class="data-table"><thead><tr><th>Date</th><th>Produit</th><th>Quantite</th><th>Note</th></tr></thead><tbody id="exitsBody"></tbody></table>
+      </div>
+    </div>
+    <div class="page" id="page-suppliers">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div class="search-box" style="width:240px"><i class="fa-solid fa-magnifying-glass"></i><input type="text" class="form-input" placeholder="Chercher un fournisseur..." id="supplierSearch" oninput="renderSuppliers()"></div>
+        <button class="btn btn-primary" onclick="openSupplierModal()"><i class="fa-solid fa-plus"></i> Ajouter</button>
+      </div>
+      <div class="chart-wrap" style="padding:0;overflow-x:auto">
+        <table class="data-table"><thead><tr><th>Fournisseur</th><th>Telephone</th><th>Email</th><th>Produits</th><th>Actions</th></tr></thead><tbody id="suppliersBody"></tbody></table>
+      </div>
+    </div>
+    <div class="page" id="page-categories">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <h3 style="font-size:1rem;font-weight:600;color:#8b949e">Gestion des categories</h3>
+        <button class="btn btn-primary" onclick="openCategoryModal()"><i class="fa-solid fa-plus"></i> Ajouter</button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="categoriesGrid"></div>
+    </div>
+    <div class="page" id="page-inventory">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <h3 style="font-size:1rem;font-weight:600;color:#8b949e">Etat des stocks</h3>
+        <div style="display:flex;gap:8px">
+          <span class="badge badge-green" style="cursor:pointer" onclick="filterInventory('ok')">En stock</span>
+          <span class="badge badge-yellow" style="cursor:pointer" onclick="filterInventory('low')">Stock faible</span>
+          <span class="badge badge-red" style="cursor:pointer" onclick="filterInventory('out')">Rupture</span>
+          <span class="badge" style="background:rgba(139,148,158,.12);color:#8b949e;cursor:pointer" onclick="filterInventory('')">Tous</span>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="inventoryGrid"></div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="modalTitle">Titre</h3>
+      <button class="btn btn-icon btn-secondary" onclick="closeModal()" style="width:32px;height:32px"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<script>
+var Store={get:function(k){try{return JSON.parse(localStorage.getItem('gs_'+k))||[]}catch(e){return[]}},set:function(k,v){localStorage.setItem('gs_'+k,JSON.stringify(v))}};
+var APP_VERSION=6;
+function initData(){if(localStorage.getItem('gs_version')!==String(APP_VERSION)){['categories','suppliers','products','entries','exits'].forEach(function(k){Store.set(k,[])});localStorage.setItem('gs_version',String(APP_VERSION))}}
+initData();
+function getCat(id){return Store.get('categories').find(function(c){return c.id===id})||{name:'-',color:'#666'}}
+function getSup(id){return Store.get('suppliers').find(function(s){return s.id===id})||{name:'-'}}
+function getProd(id){return Store.get('products').find(function(p){return p.id===id})||{name:'-'}}
+function fmt(n){return new Intl.NumberFormat('fr-FR').format(n)}
+function nextId(arr){return arr.length?Math.max.apply(null,arr.map(function(x){return x.id}))+1:1}
+function stockStatus(qty,min){if(qty<=0)return'out';if(qty<=min)return'low';return'ok'}
+function today(){return new Date().toISOString().split('T')[0]}
+function statusBadge(st){if(st==='out')return'<span class="badge badge-red"><i class="fa-solid fa-circle-xmark"></i> Rupture</span>';if(st==='low')return'<span class="badge badge-yellow"><i class="fa-solid fa-triangle-exclamation"></i> Stock faible</span>';return'<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i> En stock</span>'}
+var CAT_COLORS=['#f0b429','#22c55e','#3b82f6','#a855f7','#ef4444','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16'];
+function toast(msg,type){type=type||'success';var c=document.getElementById('toastContainer');var icons={success:'fa-circle-check',error:'fa-circle-xmark',info:'fa-circle-info'};var el=document.createElement('div');el.className='toast toast-'+type;el.innerHTML='<i class="fa-solid '+(icons[type]||icons.info)+'"></i>'+msg+'<div class="progress"></div>';c.appendChild(el);setTimeout(function(){el.style.opacity='0';el.style.transform='translateX(60px)';el.style.transition='all .3s ease';setTimeout(function(){el.remove()},300)},3000)}
+function openModal(title,bodyHTML,footerHTML){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=bodyHTML;document.getElementById('modalFooter').innerHTML=footerHTML;document.getElementById('modal').classList.add('show')}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+document.getElementById('modal').addEventListener('click',function(e){if(e.target.id==='modal')closeModal()});
+var selectedIds=new Set();
+function toggleSelect(id){if(selectedIds.has(id))selectedIds.delete(id);else selectedIds.add(id);updateSelectionUI()}
+function toggleSelectAll(){var vis=getFilteredProducts();var allSel=vis.length>0&&vis.every(function(p){return selectedIds.has(p.id)});if(allSel)vis.forEach(function(p){selectedIds.delete(p.id)});else vis.forEach(function(p){selectedIds.add(p.id)});updateSelectionUI();renderProducts()}
+function clearSelection(){selectedIds.clear();updateSelectionUI();renderProducts()}
+function updateSelectionUI(){var bar=document.getElementById('bulkBar');var count=document.getElementById('bulkCount');var label=document.getElementById('selectCount');var cb=document.getElementById('selectAllCb');var vis=getFilteredProducts();var allSel=vis.length>0&&vis.every(function(p){return selectedIds.has(p.id)});if(selectedIds.size>0){bar.classList.add('show');count.textContent=selectedIds.size;label.textContent=selectedIds.size+' selectionne(s)'}else{bar.classList.remove('show');label.textContent='Tout selectionner'}if(cb)cb.className='custom-cb'+(allSel?' checked':'')}
+function getFilteredProducts(){var prods=Store.get('products');var q=(document.getElementById('productSearch')?document.getElementById('productSearch').value:'').toLowerCase();var catF=document.getElementById('productCatFilter')?document.getElementById('productCatFilter').value:'';return prods.filter(function(p){return p.name.toLowerCase().includes(q)&&(!catF||p.catId===+catF)})}
+function bulkDelete(){var n=selectedIds.size;if(!n)return;openModal('Confirmer la suppression multiple','<div style="text-align:center;padding:10px 0"><i class="fa-solid fa-triangle-exclamation" style="font-size:2.5rem;color:#ef4444;margin-bottom:12px"></i><p style="color:#f1f5f9;font-size:1.05rem;font-weight:600;margin-bottom:6px">Supprimer '+n+' produit(s) ?</p><p style="color:#8b949e;font-size:.85rem">Cette action est irreversible.</p></div>','<button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-danger" onclick="confirmBulkDelete()"><i class="fa-solid fa-trash"></i> Supprimer '+n+' produit(s)</button>')}
+function confirmBulkDelete(){Store.set('products',Store.get('products').filter(function(p){return!selectedIds.has(p.id)}));var n=selectedIds.size;selectedIds.clear();closeModal();toast(n+' produit(s) supprime(s)','info');updateSelectionUI();renderProducts()}
+function downloadTemplate(){var cats=Store.get('categories');var sups=Store.get('suppliers');var wsData=[['Nom du produit','Categorie','Quantite','Stock minimum','Fournisseur'],['Exemple : Huile d\'olive 1L',cats[0]?cats[0].name:'Votre categorie',100,20,sups[0]?sups[0].name:'Votre fournisseur']];var ws=XLSX.utils.aoa_to_sheet(wsData);ws['!cols']=[{wch:30},{wch:18},{wch:12},{wch:15},{wch:30}];var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Modele Import');XLSX.writeFile(wb,'GestionStock_Modele_Import.xlsx');toast('Modele telecharge','info')}
+function openImportModal(){openModal('Importer depuis Excel','<div style="margin-bottom:16px"><p style="color:#8b949e;font-size:.85rem;margin-bottom:14px">Importez un fichier <strong style="color:#f1f5f9">.xlsx</strong> ou <strong style="color:#f1f5f9">.xls</strong> contenant les colonnes : <span style="color:#f0b429">Nom, Categorie, Quantite, Stock minimum, Fournisseur</span>.</p><div class="drop-zone" id="dropZone"><input type="file" accept=".xlsx,.xls,.csv" id="fileInput" onchange="handleFileSelect(event)"><i class="fa-solid fa-cloud-arrow-up" style="display:block"></i><p style="color:#f1f5f9;font-weight:600;margin-bottom:4px">Glissez votre fichier ici</p><p style="color:#8b949e;font-size:.8rem">ou cliquez pour parcourir</p></div></div><div id="importPreview" style="display:none"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><h4 style="font-size:.9rem;font-weight:600;color:#f0b429" id="previewTitle">Apercu</h4><div style="display:flex;gap:8px;align-items:center"><label class="form-label" style="margin:0;font-size:.78rem">Ecraser</label><div class="custom-cb" id="overwriteCb" onclick="this.classList.toggle(\'checked\')"></div></div></div><div class="preview-table" id="previewTableWrap"></div><p style="font-size:.78rem;color:#8b949e;margin-top:8px" id="previewInfo"></p></div>','<button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" id="confirmImportBtn" onclick="confirmImport()" style="display:none"><i class="fa-solid fa-file-import"></i> Importer <span id="importCount"></span></button>');setupDropZone()}
+function setupDropZone(){var zone=document.getElementById('dropZone');if(!zone)return;['dragenter','dragover'].forEach(function(ev){zone.addEventListener(ev,function(e){e.preventDefault();zone.classList.add('drag-over')})});['dragleave','drop'].forEach(function(ev){zone.addEventListener(ev,function(e){e.preventDefault();zone.classList.remove('drag-over')})});zone.addEventListener('drop',function(e){var f=e.dataTransfer.files[0];if(f)processFile(f)})}
+var pendingImportData=[];
+function handleFileSelect(e){var f=e.target.files[0];if(f)processFile(f)}
+function processFile(file){if(!file.name.match(/\.(xlsx|xls|csv)$/i)){toast('Format non supporte','error');return}var reader=new FileReader();reader.onload=function(e){try{var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});if(!rows.length){toast('Le fichier est vide','error');return}var cats=Store.get('categories');var sups=Store.get('suppliers');var catMap={};cats.forEach(function(c){catMap[c.name.toLowerCase()]=c.id});var supMap={};sups.forEach(function(s){supMap[s.name.toLowerCase()]=s.id});pendingImportData=[];var errors=0;rows.forEach(function(row){var name=row['Nom du produit']||row['Nom']||row['nom']||row['Produit']||row['produit']||row['name']||'';var catName=row['Categorie']||row['categorie']||row['Cat\u00e9gorie']||row['cat\u00e9gorie']||'';var qty=parseFloat(row['Quantite']||row['quantite']||row['Quantit\u00e9']||row['quantit\u00e9']||row['Stock']||row['stock']||0);var min=parseFloat(row['Stock minimum']||row['stock minimum']||row['Min']||row['min']||row['Seuil']||5);var supName=row['Fournisseur']||row['fournisseur']||'';if(!String(name).trim()){errors++;return}var catKey=String(catName).toLowerCase();var supKey=String(supName).toLowerCase();pendingImportData.push({name:String(name).trim(),catId:catMap[catKey]||(cats[0]?cats[0].id:1),qty:Math.max(0,isNaN(qty)?0:qty),min:Math.max(0,isNaN(min)?5:min),supId:supMap[supKey]||(sups[0]?sups[0].id:1),_catName:String(catName),_supName:String(supName),_catOk:!!catMap[catKey],_supOk:!!supMap[supKey]})});if(!pendingImportData.length){toast('Aucune donnee valide trouvee','error');return}showImportPreview(errors)}catch(err){toast('Erreur de lecture : '+err.message,'error')}};reader.readAsArrayBuffer(file)}
+function showImportPreview(errors){document.getElementById('importPreview').style.display='block';document.getElementById('previewTitle').textContent='Apercu : '+pendingImportData.length+' produit(s)';var html='<table><thead><tr><th>#</th><th>Nom</th><th>Categorie</th><th>Qte</th><th>Min</th><th>Fournisseur</th></tr></thead><tbody>';pendingImportData.forEach(function(p,i){html+='<tr><td style="color:#4a5568">'+(i+1)+'</td><td style="font-weight:500">'+p.name+'</td><td style="'+(p._catOk?'':'color:#f59e0b')+'">'+(p._catName||'-')+(!p._catOk?' <i class="fa-solid fa-triangle-exclamation" style="font-size:.65rem"></i>':'')+'</td><td>'+p.qty+'</td><td>'+p.min+'</td><td style="'+(p._supOk?'':'color:#f59e0b')+'">'+(p._supName||'-')+(!p._supOk?' <i class="fa-solid fa-triangle-exclamation" style="font-size:.65rem"></i>':'')+'</td></tr>'});html+='</tbody></table>';document.getElementById('previewTableWrap').innerHTML=html;var info=pendingImportData.length+' produit(s) a importer.';if(errors)info+=' '+errors+' ligne(s) ignoree(s).';var un=pendingImportData.filter(function(p){return!p._catOk||!p._supOk});if(un.length)info+=' '+un.length+' correspondance(s) imprecise(s).';document.getElementById('previewInfo').textContent=info;document.getElementById('confirmImportBtn').style.display='inline-flex';document.getElementById('importCount').textContent='('+pendingImportData.length+')'}
+function confirmImport(){if(!pendingImportData.length)return;var overwrite=document.getElementById('overwriteCb').classList.contains('checked');var prods=overwrite?[]:Store.get('products');var maxId=prods.length?Math.max.apply(null,prods.map(function(p){return p.id})):0;pendingImportData.forEach(function(p,i){prods.push({id:maxId+i+1,name:p.name,catId:p.catId,qty:p.qty,min:p.min,supId:p.supId})});Store.set('products',prods);var n=pendingImportData.length;pendingImportData=[];closeModal();toast(n+' produit(s) importe(s)');renderProducts()}
+function exportToExcel(){var prods=Store.get('products');if(!prods.length){toast('Aucun produit a exporter','error');return}var data=prods.map(function(p){var cat=getCat(p.catId);var sup=getSup(p.supId);var st=stockStatus(p.qty,p.min);return{'ID':p.id,'Nom du produit':p.name,'Categorie':cat.name,'Quantite':p.qty,'Stock minimum':p.min,'Statut':st==='ok'?'En stock':st==='low'?'Stock faible':'Rupture','Fournisseur':sup.name}});var ws=XLSX.utils.json_to_sheet(data);ws['!cols']=[{wch:5},{wch:35},{wch:16},{wch:10},{wch:14},{wch:14},{wch:30}];var summaryData=[{'Indicateur':'Total produits','Valeur':prods.length},{'Indicateur':'Quantite totale','Valeur':prods.reduce(function(s,p){return s+p.qty},0)},{'Indicateur':'Alertes stock faible','Valeur':prods.filter(function(p){return stockStatus(p.qty,p.min)==='low'}).length},{'Indicateur':'Ruptures','Valeur':prods.filter(function(p){return stockStatus(p.qty,p.min)==='out'}).length},{'Indicateur':'Date export','Valeur':new Date().toLocaleString('fr-FR')}];var ws2=XLSX.utils.json_to_sheet(summaryData);ws2['!cols']=[{wch:30},{wch:25}];var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Produits');XLSX.utils.book_append_sheet(wb,ws2,'Resume');XLSX.writeFile(wb,'GestionStock_Export_'+today()+'.xlsx');toast(prods.length+' produit(s) exporte(s)')}
+var PAGE_TITLES={dashboard:'Tableau de bord',products:'Produits',entries:'Entrees de stock',exits:'Sorties de stock',suppliers:'Fournisseurs',categories:'Categories',inventory:'Inventaire'};
+var currentPage='dashboard';
+function navigate(page){currentPage=page;document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});document.getElementById('page-'+page).classList.add('active');document.querySelectorAll('.sidebar-nav li').forEach(function(l){l.classList.toggle('active',l.dataset.page===page)});document.getElementById('pageTitle').textContent=PAGE_TITLES[page]||page;document.getElementById('sidebar').classList.remove('open');selectedIds.clear();updateSelectionUI();renderPage(page)}
+function renderPage(page){switch(page){case'dashboard':renderDashboard();break;case'products':renderProducts();break;case'entries':renderEntries();break;case'exits':renderExits();break;case'suppliers':renderSuppliers();break;case'categories':renderCategories();break;case'inventory':renderInventory();break}}
+document.getElementById('sidebarNav').addEventListener('click',function(e){var li=e.target.closest('li');if(li&&li.dataset.page)navigate(li.dataset.page)});
+function handleGlobalSearch(q){if(q.length>0&&currentPage!=='products')navigate('products');if(currentPage==='products'){document.getElementById('productSearch').value=q;renderProducts()}}
+function renderDashboard(){var prods=Store.get('products');var cats=Store.get('categories');var sups=Store.get('suppliers');var totalQty=prods.reduce(function(s,p){return s+p.qty},0);var al=prods.filter(function(p){return stockStatus(p.qty,p.min)==='low'}).length;var ru=prods.filter(function(p){return stockStatus(p.qty,p.min)==='out'}).length;var cards=[{label:'Total Produits',value:fmt(prods.length),icon:'fa-boxes-stacked',color:'#f0b429',bg:'rgba(240,180,41,.12)',trend:prods.length+' produit(s)',up:true},{label:'Quantite Totale',value:fmt(totalQty)+' unites',icon:'fa-cubes',color:'#22c55e',bg:'rgba(34,197,94,.12)',trend:'Unites en stock',up:true},{label:'Alertes Stock Faible',value:fmt(al),icon:'fa-triangle-exclamation',color:'#f59e0b',bg:'rgba(245,158,11,.12)',trend:al?'Necessitent attention':'Aucune alerte',up:false},{label:'Ruptures de Stock',value:fmt(ru),icon:'fa-circle-xmark',color:'#ef4444',bg:'rgba(239,68,68,.12)',trend:ru?'Commandes urgentes':'Aucune rupture',up:false}];document.getElementById('statCards').innerHTML=cards.map(function(c){return'<div class="stat-card"><div class="icon-wrap" style="background:'+c.bg+';color:'+c.color+'"><i class="fa-solid '+c.icon+'"></i></div><div class="label">'+c.label+'</div><div class="value" style="animation:countUp .4s ease">'+c.value+'</div><div class="trend" style="color:'+(c.up?'#22c55e':c.color)+'"><i class="fa-solid '+(c.up?'fa-arrow-trend-up':'fa-info-circle')+'" style="font-size:.65rem"></i> '+c.trend+'</div></div>'}).join('');var onboard=document.getElementById('onboardSection');if(!prods.length&&!cats.length&&!sups.length){onboard.innerHTML='<div style="margin-bottom:20px"><h3 style="font-size:1.05rem;font-weight:700;color:#f1f5f9;margin-bottom:6px">Bienvenue dans GestionStock Pro</h3><p style="color:#8b949e;font-size:.88rem">Pour commencer, configurez vos donnees de base :</p></div><div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8"><div class="onboard-card" onclick="navigate(\'categories\')"><div class="onboard-icon" style="background:rgba(240,180,41,.12);color:#f0b429"><i class="fa-solid fa-tags"></i></div><div><div class="onboard-title">1. Creer des categories</div><div class="onboard-desc">Organisez vos produits par categorie</div></div></div><div class="onboard-card" onclick="navigate(\'suppliers\')"><div class="onboard-icon" style="background:rgba(34,197,94,.12);color:#22c55e"><i class="fa-solid fa-truck-field"></i></div><div><div class="onboard-title">2. Ajouter des fournisseurs</div><div class="onboard-desc">Enregistrez vos fournisseurs</div></div></div><div class="onboard-card" onclick="navigate(\'products\')"><div class="onboard-icon" style="background:rgba(59,130,246,.12);color:#3b82f6"><i class="fa-solid fa-boxes-stacked"></i></div><div><div class="onboard-title">3. Saisir vos produits</div><div class="onboard-desc">Manuellement ou via import Excel</div></div></div></div>'}else{onboard.innerHTML=''}var allMoves=Store.get('entries').slice(-5).map(function(e){return{id:e.id,prodId:e.prodId,qty:e.qty,date:e.date,note:e.note,type:'entry'}}).concat(Store.get('exits').slice(-5).map(function(e){return{id:e.id,prodId:e.prodId,qty:e.qty,date:e.date,note:e.note,type:'exit'}})).sort(function(a,b){return b.id-a.id}).slice(0,8);if(allMoves.length){var rows=allMoves.map(function(m){var p=getProd(m.prodId);var tb=m.type==='entry'?'<span class="badge badge-green"><i class="fa-solid fa-arrow-down"></i> Entree</span>':'<span class="badge badge-red"><i class="fa-solid fa-arrow-up"></i> Sortie</span>';return'<tr><td>'+tb+'</td><td>'+p.name+'</td><td style="font-weight:600">'+(m.type==='entry'?'+':'-')+m.qty+'</td><td style="color:#8b949e">'+m.date+'</td></tr>'}).join('');document.getElementById('recentActivity').innerHTML='<table class="data-table"><thead><tr><th>Type</th><th>Produit</th><th>Quantite</th><th>Date</th></tr></thead><tbody>'+rows+'</tbody></table>'}else{document.getElementById('recentActivity').innerHTML='<div class="empty-state"><i class="fa-solid fa-inbox"></i><p>Aucune activite enregistree</p><p class="hint">Les entrees et sorties apparaitront ici.</p></div>'}}
+function renderProducts(){var prods=Store.get('products');var cats=Store.get('categories');var q=(document.getElementById('productSearch')?document.getElementById('productSearch').value:'').toLowerCase();var catF=document.getElementById('productCatFilter')?document.getElementById('productCatFilter').value:'';var sel=document.getElementById('productCatFilter');if(sel){var cv=sel.value;sel.innerHTML='<option value="">Toutes categories</option>';cats.forEach(function(c){var o=document.createElement('option');o.value=c.id;o.textContent=c.name;sel.appendChild(o)});sel.value=cv}var filtered=prods.filter(function(p){return p.name.toLowerCase().includes(q)&&(!catF||p.catId===+catF)});var allSel=filtered.length>0&&filtered.every(function(p){return selectedIds.has(p.id)});var cb=document.getElementById('selectAllCb');if(cb)cb.className='custom-cb'+(allSel?' checked':'');if(filtered.length){document.querySelector('#productsTable tbody').innerHTML=filtered.map(function(p){var cat=getCat(p.catId);var st=stockStatus(p.qty,p.min);var ck=selectedIds.has(p.id);return'<tr class="'+(ck?'selected-row':'')+'"><td><div class="custom-cb '+(ck?'checked':'')+'" onclick="toggleSelect('+p.id+');renderProducts()"></div></td><td style="font-weight:600">'+p.name+'</td><td><span style="color:'+cat.color+'">'+cat.name+'</span></td><td>'+fmt(p.qty)+'</td><td>'+p.min+'</td><td>'+statusBadge(st)+'</td><td><div style="display:flex;gap:6px"><button class="btn btn-sm btn-secondary btn-icon" onclick="openProductModal('+p.id+')"><i class="fa-solid fa-pen-to-square"></i></button><button class="btn btn-sm btn-danger btn-icon" onclick="deleteProduct('+p.id+')"><i class="fa-solid fa-trash"></i></button></div></td></tr>'}).join('')}else{document.querySelector('#productsTable tbody').innerHTML='<tr><td colspan="7"><div class="empty-state"><i class="fa-solid fa-box-open"></i><p>Aucun produit pour le moment</p><p class="hint">Cliquez sur "Ajouter" ou utilisez "Importer Excel".</p></div></td></tr>'}updateSelectionUI()}
+function openProductModal(id){var cats=Store.get('categories');var sups=Store.get('suppliers');if(!cats.length||!sups.length){toast('Ajoutez d\'abord une categorie et un fournisseur','error');return}var p=id?getProd(id):{name:'',catId:cats[0].id,qty:0,min:5,supId:sups[0].id};var co=cats.map(function(c){return'<option value="'+c.id+'"'+(c.id===p.catId?' selected':'')+'>'+c.name+'</option>'}).join('');var so=sups.map(function(s){return'<option value="'+s.id+'"'+(s.id===p.supId?' selected':'')+'>'+s.name+'</option>'}).join('');openModal(id?'Modifier le produit':'Ajouter un produit','<div style="display:flex;flex-direction:column;gap:14px"><div><label class="form-label">Nom du produit</label><input type="text" class="form-input" id="mProdName" value="'+p.name+'" placeholder="Ex : Huile d\'olive 1L"></div><div class="grid grid-cols-2 gap-3"><div><label class="form-label">Categorie</label><select class="form-input" id="mProdCat">'+co+'</select></div><div><label class="form-label">Fournisseur</label><select class="form-input" id="mProdSup">'+so+'</select></div></div><div class="grid grid-cols-2 gap-3"><div><label class="form-label">Quantite</label><input type="number" class="form-input" id="mProdQty" value="'+p.qty+'" min="0"></div><div><label class="form-label">Stock min</label><input type="number" class="form-input" id="mProdMin" value="'+p.min+'" min="0"></div></div></div>','<button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="saveProduct('+(id||0)+')">'+(id?'Enregistrer':'Ajouter')+'</button>');setTimeout(function(){var el=document.getElementById('mProdName');if(el)el.focus()},100)}
+function saveProduct(id){var name=document.getElementById('mProdName').value.trim();if(!name){toast('Veuillez saisir un nom de produit','error');return}var data={name:name,catId:+document.getElementById('mProdCat').value,supId:+document.getElementById('mProdSup').value,qty:Math.max(0,+document.getElementById('mProdQty').value||0),min:Math.max(0,+document.getElementById('mProdMin').value||0)};var prods=Store.get('products');if(id){var idx=prods.findIndex(function(p){return p.id===id});if(idx>=0){prods[idx].name=data.name;prods[idx].catId=data.catId;prods[idx].supId=data.supId;prods[idx].qty=data.qty;prods[idx].min=data.min}toast('Produit modifie')}else{data.id=nextId(prods);prods.push(data);toast('Produit ajoute')}Store.set('products',prods);closeModal();renderProducts()}
+function deleteProduct(id){var p=getProd(id);openModal('Confirmer la suppression','<div style="text-align:center;padding:10px 0"><i class="fa-solid fa-triangle-exclamation" style="font-size:2.5rem;color:#ef4444;margin-bottom:12px"></i><p style="color:#f1f5f9;font-size:1.05rem;font-weight:600;margin-bottom:6px">Supprimer ce produit ?</p><p style="color:#8b949e;font-size:.85rem">'+p.name+'</p></div>','<button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-danger" onclick="doDeleteProduct('+id+')"><i class="fa-solid fa-trash"></i> Supprimer</button>')}
+function doDeleteProduct(id){Store.set('products',Store.get('products').filter(function(p){return p.id!==id}));closeModal();toast('Produit supprime','info');renderProducts()}
+function renderEntries(){var prods=Store.get('products');var sel=document.getElementById('entryProduct');if(prods.length){sel.innerHTML=prods.map(function(p){return'<option value="'+p.id+'">'+p.name+' (stock: '+p.qty+')</option>'}).join('');sel.disabled=false}else{sel.innerHTML='<option value="">-- Aucun produit --</option>';sel.disabled=true}document.getElementById('entryDate').value=today();var entries=Store.get('entries').sort(function(a,b){return b.id-a.id}).slice(0,50);if(entries.length){document.getElementById('entriesBody').innerHTML=entries.map(function(e){var p=getProd(e.prodId);return'<tr><td style="color:#8b949e">'+e.date+'</td><td style="font-weight:500">'+p.name+'</td><td style="color:#22c55e;font-weight:600">+'+e.qty+'</td><td style="color:#8b949e">'+(e.note||'-')+'</td></tr>'}).join('')}else{document.getElementById('entriesBody').innerHTML='<tr><td colspan="4"><div class="empty-state"><i class="fa-solid fa-arrow-down"></i><p>Aucune entree enregistree</p><p class="hint">Ajoutez d\'abord des produits.</p></div></td></tr>'}}
+function addEntry(){var prodId=+document.getElementById('entryProduct').value;var qty=+document.getElementById('entryQty').value;var date=document.getElementById('entryDate').value;var note=document.getElementById('entryNote').value.trim();if(!prodId||!qty||qty<=0){toast('Remplissez le formulaire correctement','error');return}if(!date){toast('Selectionnez une date','error');return}var entries=Store.get('entries');entries.push({id:nextId(entries),prodId:prodId,qty:qty,date:date,note:note});Store.set('entries',entries);var prods=Store.get('products');var idx=prods.findIndex(function(p){return p.id===prodId});if(idx>=0){prods[idx].qty+=qty;Store.set('products',prods)}document.getElementById('entryQty').value='';document.getElementById('entryNote').value='';toast('Entree de '+qty+' unites enregistree');renderEntries()}
+function renderExits(){var prods=Store.get('products');var sel=document.getElementById('exitProduct');if(prods.length){sel.innerHTML=prods.map(function(p){return'<option value="'+p.id+'">'+p.name+' (stock: '+p.qty+')</option>'}).join('');sel.disabled=false}else{sel.innerHTML='<option value="">-- Aucun produit --</option>';sel.disabled=true}document.getElementById('exitDate').value=today();var exits=Store.get('exits').sort(function(a,b){return b.id-a.id}).slice(0,50);if(exits.length){document.getElementById('exitsBody').innerHTML=exits.map(function(e){var p=getProd(e.prodId);return'<tr><td style="color:#8b949e">'+e.date+'</td><td style="font-weight:500">'+p.name+'</td><td style="color:#ef4444;font-weight:600">-'+e.qty+'</td><td style="color:#8b949e">'+(e.note||'-')+'</td></tr>'}).join('')}else{document.getElementById('exitsBody').innerHTML='<tr><td colspan="4"><div class="empty-state"><i class="fa-solid fa-arrow-up"></i><p>Aucune sortie enregistree</p><p class="hint">Ajoutez d\'abord des produits.</p></div></td></tr>'}}
+function addExit(){var prodId=+document.getElementById('exitProduct').value;var qty=+document.getElementById('exitQty').value;var date=document.getElementById('exitDate').value;var note=document.getElementById('exitNote').value.trim();if(!prodId||!qty||qty<=0){toast('Remplissez le formulaire correctement','error');return}if(!date){toast('Selectionnez une date','error');return}var prods=Store.get('products');var p=prods.find(function(x){return x.id===prodId});if(!p){toast('Produit introuvable','error');return}if(qty>p.qty){toast('Stock insuffisant ! Disponible : '+p.qty,'error');return}var exits=Store.get('exits');exits.push({id:nextId(exits),prodId:prodId,qty:qty,date:date,note:note});Store.set('exits',exits);var idx=prods.findIndex(function(x){return x.id===prodId});if(idx>=0){prods[idx].qty-=qty;Store.set('products',prods)}document.getElementById('exitQty').value='';document.getElementById('exitNote').value='';toast('Sortie de '+qty+' unites enregistree');renderExits()}
+function renderSuppliers(){var sups=Store.get('suppliers');var prods=Store.get('products');var q=(document.getElementById('supplierSearch')?document.getElementById('supplierSearch').value:'').toLowerCase();var filtered=sups.filter(function(s){return s.name.toLowerCase().includes(q)||(s.email||'').toLowerCase().includes(q)||(s.phone||'').includes(q)});if(filtered.length){document.getElementById('suppliersBody').innerHTML=filtered.map(function(s){var pc=prods.filter(function(p){return p.supId===s.id}).length;return'<tr><td style="font-weight:600">'+s.name+'</td><td style="color:#8b949e">'+(s.phone||'-')+'</td><td style="color:#8b949e">'+(s.email||'-')+'</td><td><span class="badge" style="background:rgba(240,180,41,.12);color:#f0b429">'+pc+' produit(s)</span></td><td><div style="display:flex;gap:6px"><button class="btn btn-sm btn-secondary btn-icon" onclick="openSupplierModal('+s.id+')"><i class="fa-solid fa-pen-to-square"></i></button><button class="btn btn-sm btn-danger btn-icon" onclick="deleteSupplier('+s.id+')"><i class="fa-solid fa-trash"></i></button></div></td></tr>'}).join('')}else{document.getElementById('suppliersBody').innerHTML='<tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-truck-field"></i><p>Aucun fournisseur enregistre</p><p class="hint">Cliquez sur "Ajouter".</p></div></td></tr>'}}
+function openSupplierModal(id){var s=id?getSup(id):{name:'',phone:'',email:''};openModal(id?'Modifier le fournisseur':'Ajouter un fournisseur','<div style="display:flex;flex-direction:column;gap:14px"><div><label class="form-label">Nom du fournisseur</label><input type="text" class="form-input" id="mSupName" value="'+s.name+'" placeholder="Ex : SARL ABC Distribution"></div><div><label class="form-label">Telephone</label><input type="text" class="form-input" id="mSupPhone" value="'+(s.phone||'')+'" placeholder="Ex : +213 555 123 456"></div><div><label class="form-label">Email</label><input type="email" class="form-input" id="mSupEmail" value="'+(s.email||'')+'" placeholder="Ex : contact@abc.com"></div></div>','<button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="saveSupplier('+(id||0)+')">'+(id?'Enregistrer':'Ajouter')+'</button>');setTimeout(function(){var el=document.getElementById('mSupName');if(el)el.focus()},100)}
+function saveSupplier(id){var name=document.getElementById('mSupName').value.trim();if(!name){toast('Veuillez saisir un nom','error');return}var data={name:name,phone:document.getElementById('mSupPhone').value.trim(),email:document.getElementById('mSupEmail').value.trim()};var sups=Store.get('suppliers');if(id){var idx=sups.findIndex(function(s){return s.id===id});if(idx>=0){sups[idx].name=data.name;sups[idx].phone=data.phone;sups[idx].email=data.email}toast('Fournisseur modifie')}else{data.id=nextId(sups);sups.push(data);toast('Fournisseur ajoute')}Store.set('suppliers',sups);closeModal();renderSuppliers()}
+function deleteSupplier(id){var s=getSup(id);var pc=Store.get('products').filter(function(p){return p.supId===id}).length;var w=pc>0?'<p style="color:#f59e0b;font-size:.85rem;margin-top:8px"><i class="fa-solid fa-triangle-exclamation"></i> '+pc+' produit(s) associe(s).</p>':'';openModal('Confirmer la suppression','<div style="text-align:center;padding:10px 0"><i class="fa-solid fa-triangle-exclamation" style="font-size:2.5rem;color:#ef4444;margin-bottom:12px"></i><p style="color:#f1f5f9;font-size:1.05rem;font-weight:600;margin-bottom:6px">Supprimer ce fournisseur ?</p><p style="color:#8b949e;font-size:.85rem">'+s.name+'</p>'+w+'</div>','<button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-danger" onclick="doDeleteSupplier('+id+')"><i class="fa-solid fa-trash"></i> Supprimer</button>')}
+function doDeleteSupplier(id){Store.set('suppliers',Store.get('suppliers').filter(function(s){return s.id!==id}));closeModal();toast('Fournisseur supprime','info');renderSuppliers()}
+function renderCategories(){var cats=Store.get('categories');var prods=Store.get('products');var grid=document.getElementById('categoriesGrid');if(cats.length){grid.innerHTML=cats.map(function(c){var pc=prods.filter(function(p){return p.catId===c.id}).length;var tq=prods.filter(function(p){return p.catId===c.id}).reduce(function(s,p){return s+p.qty},0);return'<div class="cat-card"><div class="cat-color" style="background:'+c.color+'22;color:'+c.color+'"><i class="fa-solid fa-tag"></i></div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><h4 style="font-weight:600;font-size:1rem">'+c.name+'</h4><div style="display:flex;gap:4px"><button class="btn btn-sm btn-secondary btn-icon" onclick="openCategoryModal('+c.id+')" style="width:28px;height:28px"><i class="fa-solid fa-pen" style="font-size:.7rem"></i></button><button class="btn btn-sm btn-danger btn-icon" onclick="deleteCategory('+c.id+')" style="width:28px;height:28px"><i class="fa-solid fa-trash" style="font-size:.7rem"></i></button></div></div><div style="display:flex;gap:16px;font-size:.8rem;color:#8b949e"><span><strong style="color:#f1f5f9">'+pc+'</strong> produit(s)</span><span><strong style="color:#f1f5f9">'+fmt(tq)+'</strong> unites</span></div></div>'}).join('')}else{grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><i class="fa-solid fa-tags"></i><p>Aucune categorie creee</p><p class="hint">Les categories organisent vos produits.</p></div>'}}
+function openCategoryModal(id){var c=id?getCat(id):{name:'',color:CAT_COLORS[Store.get('categories').length%CAT_COLORS.length]};var sw=CAT_COLORS.map(function(col){return'<div onclick="document.getElementById(\'mCatColor\').value=\''+col+'\';document.querySelectorAll(\'.csw\').forEach(function(s){s.style.outline=\'none\'});this.style.outline=\'2px solid #f1f5f9\';this.style.outlineOffset=\'2px\'" class="csw" style="width:28px;height:28px;border-radius:6px;background:'+col+';cursor:pointer;transition:transform .15s'+(col===c.color?';outline:2px solid #f1f5f9;outline-offset:2px':'')+'" onmouseenter="this.style.transform=\'scale(1.15)\'" onmouseleave="this.style.transform=\'scale(1)\'"></div>'}).join('');openModal(id?'Modifier la categorie':'Ajouter une categorie','<div style="display:flex;flex-direction:column;gap:14px"><div><label class="form-label">Nom de la categorie</label><input type="text" class="form-input" id="mCatName" value="'+c.name+'" placeholder="Ex : Alimentation"></div><div><label class="form-label">Couleur</label><input type="hidden" id="mCatColor" value="'+c.color+'"><div style="display:flex;gap:8px;flex-wrap:wrap">'+sw+'</div></div></div>','<button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="saveCategory('+(id||0)+')">'+(id?'Enregistrer':'Ajouter')+'</button>');setTimeout(function(){var el=document.getElementById('mCatName');if(el)el.focus()},100)}
+function saveCategory(id){var name=document.getElementById('mCatName').value.trim();if(!name){toast('Veuillez saisir un nom','error');return}var color=document.getElementById('mCatColor').value||CAT_COLORS[0];var cats=Store.get('categories');if(id){var idx=cats.findIndex(function(c){return c.id===id});if(idx>=0){cats[idx].name=name;cats[idx].color=color}toast('Categorie modifiee')}else{cats.push({id:nextId(cats),name:name,color:color});toast('Categorie ajoutee')}Store.set('categories',cats);closeModal();renderCategories()}
+function deleteCategory(id){var c=getCat(id);var pc=Store.get('products').filter(function(p){return p.catId===id}).length;var w=pc>0?'<p style="color:#f59e0b;font-size:.85rem;margin-top:8px"><i class="fa-solid fa-triangle-exclamation"></i> '+pc+' produit(s) dans cette categorie.</p>':'';openModal('Confirmer la suppression','<div style="text-align:center;padding:10px 0"><i class="fa-solid fa-triangle-exclamation" style="font-size:2.5rem;color:#ef4444;margin-bottom:12px"></i><p style="color:#f1f5f9;font-size:1.05rem;font-weight:600;margin-bottom:6px">Supprimer cette categorie ?</p><p style="color:#8b949e;font-size:.85rem">'+c.name+'</p>'+w+'</div>','<button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-danger" onclick="doDeleteCategory('+id+')"><i class="fa-solid fa-trash"></i> Supprimer</button>')}
+function doDeleteCategory(id){Store.set('categories',Store.get('categories').filter(function(c){return c.id!==id}));closeModal();toast('Categorie supprimee','info');renderCategories()}
+var inventoryFilter='';
+function renderInventory(){var prods=Store.get('products');var filtered=prods.filter(function(p){if(!inventoryFilter)return true;return stockStatus(p.qty,p.min)===inventoryFilter});var grid=document.getElementById('inventoryGrid');if(filtered.length){grid.innerHTML=filtered.map(function(p){var cat=getCat(p.catId);var st=stockStatus(p.qty,p.min);var bc=st==='ok'?'#22c55e':st==='low'?'#f59e0b':'#ef4444';var bw=p.min>0?Math.min(100,(p.qty/(p.min*3))*100):(p.qty>0?100:0);return'<div class="inv-card" style="border-left:3px solid '+bc+'"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><h4 style="font-weight:600;font-size:.95rem">'+p.name+'</h4>'+statusBadge(st)+'</div><p style="font-size:.78rem;color:#8b949e;margin-bottom:10px">'+cat.name+'</p><div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:6px"><span style="color:#8b949e">Stock : <strong style="color:#f1f5f9">'+fmt(p.qty)+'</strong></span><span style="color:#8b949e">Min : <strong style="color:#f1f5f9">'+p.min+'</strong></span></div><div class="stock-bar"><div class="stock-bar-fill" style="width:'+bw+'%;background:'+bc+'"></div></div></div>'}).join('')}else{var fl=inventoryFilter==='ok'?'en stock':inventoryFilter==='low'?'avec stock faible':'en rupture';grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><i class="fa-solid fa-clipboard-list"></i><p>Aucun produit '+fl+'</p><p class="hint">Modifiez le filtre ou ajoutez des produits.</p></div>'}}
+function filterInventory(f){inventoryFilter=f;renderInventory()}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal()});
+renderDashboard();
+</script>
+</body>
+</html>
